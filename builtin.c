@@ -22,7 +22,7 @@ void shell_exit() {
     long user_time, sys_time;
     struct rusage usage, child_usage;
     char *ps = (char*)malloc(64*sizeof(char));
-    sprintf(ps, "ps -g %d -h -o pid=,stat=", (int)getpid());
+    sprintf(ps, "ps --ppid %d -h -o pid=,stat=", (int)getpid());
     fp = popen(ps, "r");
     char buf[1024];
     if (fp == NULL) {
@@ -71,7 +71,7 @@ void shell_jobs() {
 
     //get # of processes
     char *ps = (char*)malloc(64*sizeof(char));
-    sprintf(ps, "ps -g %d -o pid,stat,cputime,command | wc -l", (int)getpid());
+    sprintf(ps, "ps --ppid %d -o pid,stat,cputime,command | wc -l", (int)getpid());
     fp = popen(ps, "r");
     char buf[1024];
     if (fp == NULL) {
@@ -85,7 +85,7 @@ void shell_jobs() {
 
     //if there are processes print them out + details
     if (line_count > 2) {
-        sprintf(ps, "ps -g %d -o pid,stat,cputime,command", (int)getpid());
+        sprintf(ps, "ps --ppid %d -o pid,stat,cputime,command", (int)getpid());
         fp = popen(ps, "r");
         char buf[1024];
         if (fp == NULL) {

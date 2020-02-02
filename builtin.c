@@ -15,6 +15,42 @@ int shell_num_builtins() {
 }
 
 void shell_exit() {
+    FILE *fp;
+    char *pid_stat[64];
+    char *token;
+    int status; 
+    long user_time, sys_time;
+    struct rusage usage, child_usage;
+    char *ps = (char*)malloc(64*sizeof(char));
+    sprintf(ps, "ps -g %d -h -o pid=,stat=", (int)getpid());
+    fp = popen(ps, "r");
+    char buf[1024];
+    if (fp == NULL) {
+        perror("popen failed:");
+        exit(-1);
+    }
+    while((fgets(buf,1024,fp)) != NULL) {
+        token = strtok(buf, " ");
+        pid_stat[0] = token;
+        token = strtok(NULL, "\n");
+        pid_stat[1] = token;
+        //if process is currently running wait for it to end
+        if (strcmp(pid_stat[1], "R+") == 0) {
+            waitpid(atoi(pid_stat[0]), &status, 0);
+        } else if (strcmp(pid_stat[1],"T+")) {
+            kill(atoi(pid_stat[0]), SIGCONT);
+            waitpid(atoi(pid_stat[0]), &status, 0);
+        }
+    }
+    pclose(fp);
+    //calculate user and sys times
+    getrusage(RUSAGE_SELF, &usage);
+    getrusage(RUSAGE_CHILDREN, &child_usage);
+    user_time = usage.ru_utime.tv_sec + child_usage.ru_utime.tv_sec;
+    sys_time = usage.ru_stime.tv_sec + child_usage.ru_stime.tv_sec;
+    printf("\nResources used\n"
+           "User time =\t%5li seconds\n"
+           "Sys  time =\t%5li seconds\n\n", user_time, sys_time);
     exit(0);
 }
 
@@ -35,7 +71,7 @@ void shell_jobs() {
 
     //get # of processes
     char *ps = (char*)malloc(64*sizeof(char));
-    sprintf(ps, "ps --ppid %d -o pid,stat,cputime,command | wc -l", (int)getpid());
+    sprintf(ps, "ps -g %d -o pid,stat,cputime,command | wc -l", (int)getpid());
     fp = popen(ps, "r");
     char buf[1024];
     if (fp == NULL) {
@@ -43,17 +79,13 @@ void shell_jobs() {
         exit(-1);
     }
     while((fgets(buf,1024,fp)) != NULL) {
-        printf("\n%s\n", buf);
-	line_count = atoi(buf);
+	    line_count = atoi(buf);
     }
-
-    printf("\n%d\n", line_count);
     pclose(fp);
-
 
     //if there are processes print them out + details
     if (line_count > 2) {
-        sprintf(ps, "ps --ppid %d -o pid,stat,cputime,command", (int)getpid());
+        sprintf(ps, "ps -g %d -o pid,stat,cputime,command", (int)getpid());
         fp = popen(ps, "r");
         char buf[1024];
         if (fp == NULL) {
@@ -65,7 +97,7 @@ void shell_jobs() {
             printf("#  %s", buf);
         }
         processes = 0;
-	out_line_count = 0;
+	    out_line_count = 0;
         while ((fgets(buf, 1024, fp)) != NULL) {
             if (out_line_count < line_count - 2) {
 		printf("%d: %s", processes, buf);
@@ -77,8 +109,8 @@ void shell_jobs() {
     }
     printf("Processes =\t%5d active\n"
             "Completed processes:\n"
-            "User time =\t%5ld seconds\n"
-            "Sys  time =\t%5ld seconds\n\n", processes, user_time, sys_time);
+            "User time =\t%5li seconds\n"
+            "Sys  time =\t%5li seconds\n\n", processes, user_time, sys_time);
 }
 
 

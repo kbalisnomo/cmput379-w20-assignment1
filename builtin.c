@@ -37,7 +37,7 @@ void shell_exit() {
         //if process is currently running wait for it to end
         if (strcmp(pid_stat[1], "R+") == 0) {
             waitpid(atoi(pid_stat[0]), &status, 0);
-        } else if (strcmp(pid_stat[1],"T+")) {
+        } else if (strcmp(pid_stat[1], "T+") == 0) {
             kill(atoi(pid_stat[0]), SIGCONT);
             waitpid(atoi(pid_stat[0]), &status, 0);
         }

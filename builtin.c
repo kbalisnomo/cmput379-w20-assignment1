@@ -19,7 +19,7 @@ void shell_exit() {
 }
 
 void shell_jobs() {
-    int line_count, processes, tot_utime, tot_stime;
+    int line_count, out_line_count, processes, tot_utime, tot_stime;
     struct rusage usage, child_usage;
     long  user_time, sys_time, child_utime, child_stime;
     FILE *fp;
@@ -35,19 +35,25 @@ void shell_jobs() {
 
     //get # of processes
     char *ps = (char*)malloc(64*sizeof(char));
-    sprintf(ps, "ps -g %d -o pid,stat,cputime,command | wc -l", (int)getpid());
+    sprintf(ps, "ps --ppid %d -o pid,stat,cputime,command | wc -l", (int)getpid());
     fp = popen(ps, "r");
     char buf[1024];
     if (fp == NULL) {
         perror("popen failed:");
         exit(-1);
     }
-    line_count = fscanf(fp, "%d", &line_count);
+    while((fgets(buf,1024,fp)) != NULL) {
+        printf("\n%s\n", buf);
+	line_count = atoi(buf);
+    }
+
+    printf("\n%d\n", line_count);
     pclose(fp);
 
+
     //if there are processes print them out + details
-    if (line_count > 0) {
-        sprintf(ps, "ps -g %d -o pid,stat,cputime,command", (int)getpid());
+    if (line_count > 2) {
+        sprintf(ps, "ps --ppid %d -o pid,stat,cputime,command", (int)getpid());
         fp = popen(ps, "r");
         char buf[1024];
         if (fp == NULL) {
@@ -59,9 +65,13 @@ void shell_jobs() {
             printf("#  %s", buf);
         }
         processes = 0;
+	out_line_count = 0;
         while ((fgets(buf, 1024, fp)) != NULL) {
-            printf("%d: %s", processes, buf);
-            processes++;
+            if (out_line_count < line_count - 2) {
+		printf("%d: %s", processes, buf);
+                processes++;
+	    }
+	    out_line_count++;
         }
         pclose(fp);
     }
